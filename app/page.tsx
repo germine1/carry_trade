@@ -1,5 +1,6 @@
 import { AlertsPanel } from "@/components/AlertsPanel";
 import { CarryMatrix } from "@/components/CarryMatrix";
+import { CurrencyDetailToggle } from "@/components/CurrencyDetailToggle";
 import { MetricCard } from "@/components/MetricCard";
 import { RegimeBadge } from "@/components/RegimeBadge";
 import { marketTimestamp, pairObservations } from "@/lib/mock-data";
@@ -63,6 +64,9 @@ export default function Home() {
           <CarryMatrix metrics={metrics} />
           <AlertsPanel alerts={alerts} />
         </section>
+
+        {/* Lower half: interactive pair-level report controlled by the currency toggle. */}
+        <CurrencyDetailToggle metrics={metrics} initialCurrency={summary.highestRisk.currency} />
       </div>
     </main>
   );

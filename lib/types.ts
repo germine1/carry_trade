@@ -19,6 +19,8 @@ export type Regime =
 
 export type AlertSeverity = "Info" | "Watch" | "Warning" | "Critical";
 
+export type DataQuality = "Observed" | "Calculated" | "Proxy" | "Manual";
+
 export type PairObservation = {
   currency: CurrencyCode;
   pair: string;
@@ -43,6 +45,8 @@ export type PairMetrics = PairObservation & {
   carryFactor: number;
   positioningScore: number;
   volatilityScore: number;
+  volatilityShock: number;
+  carryCompression: number;
   clp: number;
   mclp: number;
   riskAdjustedCarry: number;
@@ -52,6 +56,25 @@ export type PairMetrics = PairObservation & {
     volatility: number;
     carry: number;
   };
+};
+
+export type PairSessionMetrics = {
+  session: string;
+  date: string;
+  spot: number;
+  cftcZScore: number;
+  positioningScore: number;
+  volatilityShock: number;
+  volFriction: number;
+  carryFactor: number;
+  clp: number;
+  mclp: number | null;
+};
+
+export type DataSourceStatus = {
+  label: string;
+  source: string;
+  quality: DataQuality;
 };
 
 export type CarryAlert = {
