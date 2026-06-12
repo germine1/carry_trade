@@ -84,3 +84,57 @@ export type CarryAlert = {
   title: string;
   detail: string;
 };
+
+export type BacktestPrice = {
+  date: string;
+  close: number;
+};
+
+export type BacktestPoint = {
+  date: string;
+  spot: number;
+  equity: number;
+  pnl: number;
+  drawdown: number;
+  dailyReturn: number;
+  spotReturn: number;
+  carryReturn: number;
+};
+
+export type BacktestEvent = {
+  date: string;
+  title: string;
+  category: "Fed" | "BOJ" | "Intervention" | "Risk" | "Inflation" | "Trade";
+  detail: string;
+  sourceLabel: string;
+  sourceUrl: string;
+};
+
+export type LossEpisode = {
+  startDate: string;
+  troughDate: string;
+  endDate: string | null;
+  durationDays: number;
+  maxDrawdown: number;
+  events: BacktestEvent[];
+};
+
+export type BacktestSummary = {
+  currency: CurrencyCode;
+  pair: string;
+  finalEquity: number;
+  totalPnl: number;
+  totalReturn: number;
+  maxDrawdown: number;
+  worstDayReturn: number;
+  worstDayDate: string;
+  lossDays: number;
+  dataSource: "Yahoo Finance" | "Fallback sample";
+};
+
+export type BacktestResult = {
+  summary: BacktestSummary;
+  points: BacktestPoint[];
+  lossEpisodes: LossEpisode[];
+  events: BacktestEvent[];
+};

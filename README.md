@@ -8,6 +8,7 @@ A Vercel-ready dashboard for monitoring USD carry attractiveness, positioning st
 - **Carry matrix**: spot, returns, carry, CFTC z-score, volatility z-score, CLP, MCLP, and regime.
 - **Risk alerts**: generated from CLP, CLP momentum, crowding, and volatility thresholds.
 - **Pair deep dives**: click a currency to inspect spot path, factor stack, and stress decomposition.
+- **Carry backtest**: simulates an always-on long-USD carry trade from 2024 to today with USD 10m starting capital.
 
 ## Currency Universe
 
@@ -86,4 +87,18 @@ MCLP = five-session percentage change in CLP
 ```
 
 The formula is intentionally transparent for learning and iteration. Treat the current scores as a research framework, not a production trading signal.
+
+## Backtest Notes
+
+The backtest section uses a simple approximation:
+
+```text
+daily P&L return = USD-long spot return + annualized carry / 252
+starting capital = USD 10,000,000
+start date = 2024-01-02
+```
+
+The app attempts to pull daily FX spot history from Yahoo Finance on demand. If Yahoo is unavailable, it falls back to deterministic sample data so the dashboard still renders locally and on Vercel.
+
+The event overlay is curated for major carry-risk episodes, including BOJ policy shifts, Japan FX intervention periods, Fed cuts, and broad risk-off shocks. It should be expanded as the research framework matures.
 # qf622

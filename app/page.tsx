@@ -1,5 +1,6 @@
 import { AlertsPanel } from "@/components/AlertsPanel";
 import { CarryMatrix } from "@/components/CarryMatrix";
+import { CarryBacktest } from "@/components/CarryBacktest";
 import { CurrencyDetailToggle } from "@/components/CurrencyDetailToggle";
 import { MetricCard } from "@/components/MetricCard";
 import { RegimeBadge } from "@/components/RegimeBadge";
@@ -67,6 +68,9 @@ export default function Home() {
 
         {/* Lower half: interactive pair-level report controlled by the currency toggle. */}
         <CurrencyDetailToggle metrics={metrics} initialCurrency={summary.highestRisk.currency} />
+
+        {/* Backtest section: tests where always-on carry trades historically failed. */}
+        <CarryBacktest />
       </div>
     </main>
   );
