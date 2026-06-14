@@ -77,6 +77,38 @@ The MVP uses sample data so the interface works immediately. The next step is to
 - CFTC positioning: CFTC Commitments of Traders files.
 - Volatility: realized volatility first, implied volatility later if a data source is available.
 
+## Daily Refresh
+
+The main dashboard now reads from a server-side market-data layer:
+
+```text
+app/api/market-data/route.ts
+lib/market-data.ts
+```
+
+The route attempts to refresh:
+
+- FX spot and recent returns from Yahoo Finance chart data.
+- US two-year yield from FRED using `FRED_API_KEY`.
+- Realized volatility from recent FX spot returns.
+
+If live data is unavailable, the dashboard falls back to `lib/mock-data.ts` so the app still renders.
+
+Vercel Cron is configured in `vercel.json`:
+
+```json
+{
+  "crons": [
+    {
+      "path": "/api/market-data?refresh=true",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
+```
+
+This calls the refresh endpoint once per day at midnight UTC. Add `FRED_API_KEY` in Vercel project environment variables for Production and Preview.
+
 ## Model Notes
 
 The dashboard uses a CLP-style framework:

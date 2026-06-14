@@ -4,12 +4,13 @@ import { CarryBacktest } from "@/components/CarryBacktest";
 import { CurrencyDetailToggle } from "@/components/CurrencyDetailToggle";
 import { MetricCard } from "@/components/MetricCard";
 import { RegimeBadge } from "@/components/RegimeBadge";
-import { marketTimestamp, pairObservations } from "@/lib/mock-data";
+import { getMarketData } from "@/lib/market-data";
 import { buildAlerts, buildAllMetrics, summarizeMarket } from "@/lib/metrics";
 import { formatNumber, formatPercent, formatSignedPercent } from "@/lib/format";
 
-export default function Home() {
-  const metrics = buildAllMetrics(pairObservations);
+export default async function Home() {
+  const marketData = await getMarketData();
+  const metrics = buildAllMetrics(marketData.observations);
   const alerts = buildAlerts(metrics);
   const summary = summarizeMarket(metrics);
 
@@ -28,7 +29,8 @@ export default function Home() {
           </div>
           <div className="flex flex-col items-start gap-2 lg:items-end">
             <RegimeBadge label={summary.globalRegime} />
-            <p className="text-sm text-slate-500">Last updated: {marketTimestamp}</p>
+            <p className="text-sm text-slate-500">Last refreshed: {marketData.timestamp}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Source: {marketData.source}</p>
           </div>
         </header>
 
