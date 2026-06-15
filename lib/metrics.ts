@@ -70,7 +70,42 @@ export const buildPairMetrics = (observation: PairObservation): PairMetrics => {
   };
 };
 
-const sessionDates = ["18 May", "25 May", "29 May", "01 Jun", "03 Jun", "05 Jun"];
+const formatSessionDate = (date: Date) =>
+  new Intl.DateTimeFormat("en-SG", {
+    day: "2-digit",
+    month: "short",
+    timeZone: "Asia/Singapore",
+  }).format(date);
+
+const addDays = (date: Date, days: number) => {
+  const nextDate = new Date(date);
+  nextDate.setUTCDate(nextDate.getUTCDate() + days);
+  return nextDate;
+};
+
+const previousBusinessDay = (date: Date) => {
+  let nextDate = addDays(date, -1);
+
+  while (nextDate.getUTCDay() === 0 || nextDate.getUTCDay() === 6) {
+    nextDate = addDays(nextDate, -1);
+  }
+
+  return nextDate;
+};
+
+const buildRecentSessionDates = (count: number, endDate = new Date()) => {
+  const dates: Date[] = [];
+  let cursor = endDate;
+
+  while (dates.length < count) {
+    if (cursor.getUTCDay() !== 0 && cursor.getUTCDay() !== 6) {
+      dates.unshift(cursor);
+    }
+    cursor = previousBusinessDay(cursor);
+  }
+
+  return dates.map(formatSessionDate);
+};
 
 // Session history creates the lower-dashboard path view from today's snapshot.
 // In production this should be replaced by true daily observations from yfinance/FRED/CFTC.
@@ -84,6 +119,7 @@ export const buildPairSessionHistory = (metrics: PairMetrics): PairSessionMetric
     metrics.clp * 0.88,
     metrics.clp,
   ];
+  const sessionDates = buildRecentSessionDates(clpPath.length);
 
   return clpPath.map((clpValue, index) => {
     const progress = index / (clpPath.length - 1);
