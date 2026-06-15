@@ -77,6 +77,21 @@ export type DataSourceStatus = {
   quality: DataQuality;
 };
 
+export type CurrencyRefreshStatus = {
+  currency: CurrencyCode;
+  source: "Live Yahoo/FRED" | "Fallback mock";
+  message: string;
+};
+
+export type MarketDataResult = {
+  timestamp: string;
+  source: "Live Yahoo/FRED" | "Mixed live/fallback" | "Fallback mock";
+  observations: PairObservation[];
+  refreshStatuses: CurrencyRefreshStatus[];
+  liveCount: number;
+  fallbackCount: number;
+};
+
 export type CarryAlert = {
   currency: CurrencyCode;
   pair: string;

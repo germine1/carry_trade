@@ -1,11 +1,5 @@
 import { pairObservations } from "./mock-data";
-import type { CurrencyCode, PairObservation } from "./types";
-
-type MarketDataResult = {
-  timestamp: string;
-  source: "Live Yahoo/FRED" | "Fallback mock";
-  observations: PairObservation[];
-};
+import type { CurrencyCode, CurrencyRefreshStatus, MarketDataResult, PairObservation } from "./types";
 
 type FxConfig = {
   currency: CurrencyCode;
@@ -49,8 +43,13 @@ const formatTimestamp = () =>
     timeZone: "Asia/Singapore",
   }).format(new Date());
 
+type FetchMode = "cached" | "fresh";
+
+const fetchOptions = (mode: FetchMode, revalidateSeconds: number) =>
+  mode === "fresh" ? ({ cache: "no-store" } as const) : ({ next: { revalidate: revalidateSeconds } } as const);
+
 // Yahoo chart data supplies daily spot history used for returns, realized volatility, and sparklines.
-const fetchYahooHistory = async (ticker: string) => {
+const fetchYahooHistory = async (ticker: string, mode: FetchMode) => {
   const params = new URLSearchParams({
     period1: String(toUnixSeconds(daysAgo(80))),
     period2: String(toUnixSeconds(new Date()) + 86_400),
@@ -58,9 +57,7 @@ const fetchYahooHistory = async (ticker: string) => {
     events: "history",
     includeAdjustedClose: "true",
   });
-  const response = await fetch(`${YAHOO_BASE_URL}/${ticker}?${params.toString()}`, {
-    next: { revalidate: 60 * 60 * 6 },
-  });
+  const response = await fetch(`${YAHOO_BASE_URL}/${ticker}?${params.toString()}`, fetchOptions(mode, 60 * 60 * 24));
 
   if (!response.ok) {
     throw new Error(`Yahoo request failed for ${ticker}: ${response.status}`);
@@ -78,7 +75,7 @@ const fetchYahooHistory = async (ticker: string) => {
 };
 
 // FRED is used for a first live rates input. The model falls back if the key or series is unavailable.
-const fetchLatestFredValue = async (seriesId: string) => {
+const fetchLatestFredValue = async (seriesId: string, mode: FetchMode) => {
   const apiKey = process.env.FRED_API_KEY;
   if (!apiKey) {
     throw new Error("FRED_API_KEY is not configured");
@@ -91,9 +88,7 @@ const fetchLatestFredValue = async (seriesId: string) => {
     sort_order: "desc",
     limit: "1",
   });
-  const response = await fetch(`${FRED_BASE_URL}?${params.toString()}`, {
-    next: { revalidate: 60 * 60 * 24 },
-  });
+  const response = await fetch(`${FRED_BASE_URL}?${params.toString()}`, fetchOptions(mode, 60 * 60 * 24));
 
   if (!response.ok) {
     throw new Error(`FRED request failed for ${seriesId}: ${response.status}`);
@@ -126,14 +121,14 @@ const signedReturn = (prices: number[], lookback: number, quoteConvention: PairO
   return quoteConvention === "USD per FX" ? -rawReturn : rawReturn;
 };
 
-const buildLiveObservation = async (observation: PairObservation) => {
+const buildLiveObservation = async (observation: PairObservation, mode: FetchMode) => {
   const config = fxConfigs.find((item) => item.currency === observation.currency);
   if (!config) return observation;
 
-  const prices = await fetchYahooHistory(config.ticker);
+  const prices = await fetchYahooHistory(config.ticker, mode);
   const realizedVol = annualizedRealizedVol(prices);
   const volZProxy = Math.max(-1, Math.min(3, (realizedVol - observation.realizedVol) / Math.max(observation.realizedVol * 0.45, 1)));
-  const usTwoYear = await fetchLatestFredValue("DGS2").catch(() => null);
+  const usTwoYear = await fetchLatestFredValue("DGS2", mode).catch(() => null);
   const twoYearYieldDiff = usTwoYear ? round(usTwoYear - (observation.twoYearYieldDiff > 0 ? observation.policyRateDiff - observation.twoYearYieldDiff : 0), 2) : observation.twoYearYieldDiff;
 
   return {
@@ -150,20 +145,44 @@ const buildLiveObservation = async (observation: PairObservation) => {
   };
 };
 
-export const getMarketData = async (): Promise<MarketDataResult> => {
-  try {
-    const observations = await Promise.all(pairObservations.map(buildLiveObservation));
+export const getMarketData = async (mode: FetchMode = "cached"): Promise<MarketDataResult> => {
+  const results = await Promise.all(
+    pairObservations.map(async (observation) => {
+      try {
+        return {
+          observation: await buildLiveObservation(observation, mode),
+          status: {
+            currency: observation.currency,
+            source: "Live Yahoo/FRED",
+            message: "Spot and volatility refreshed; rates use FRED when configured.",
+          } satisfies CurrencyRefreshStatus,
+        };
+      } catch (error) {
+        return {
+          observation,
+          status: {
+            currency: observation.currency,
+            source: "Fallback mock",
+            message: error instanceof Error ? error.message : "Live refresh failed.",
+          } satisfies CurrencyRefreshStatus,
+        };
+      }
+    }),
+  );
 
-    return {
-      timestamp: `${formatTimestamp()} · daily cached`,
-      source: "Live Yahoo/FRED",
-      observations,
-    };
-  } catch {
-    return {
-      timestamp: `${formatTimestamp()} · fallback data`,
-      source: "Fallback mock",
-      observations: pairObservations,
-    };
-  }
+  const observations = results.map((result) => result.observation);
+  const refreshStatuses = results.map((result) => result.status);
+  const liveCount = refreshStatuses.filter((status) => status.source === "Live Yahoo/FRED").length;
+  const fallbackCount = refreshStatuses.length - liveCount;
+  const source =
+    liveCount === refreshStatuses.length ? "Live Yahoo/FRED" : liveCount === 0 ? "Fallback mock" : "Mixed live/fallback";
+
+  return {
+    timestamp: `${formatTimestamp()} · ${mode === "fresh" ? "manual refresh" : "daily cached"}`,
+    source,
+    observations,
+    refreshStatuses,
+    liveCount,
+    fallbackCount,
+  };
 };

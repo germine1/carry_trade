@@ -3,10 +3,13 @@ import { CarryMatrix } from "@/components/CarryMatrix";
 import { CarryBacktest } from "@/components/CarryBacktest";
 import { CurrencyDetailToggle } from "@/components/CurrencyDetailToggle";
 import { MetricCard } from "@/components/MetricCard";
+import { RefreshStatusPanel } from "@/components/RefreshStatusPanel";
 import { RegimeBadge } from "@/components/RegimeBadge";
 import { getMarketData } from "@/lib/market-data";
 import { buildAlerts, buildAllMetrics, summarizeMarket } from "@/lib/metrics";
 import { formatNumber, formatPercent, formatSignedPercent } from "@/lib/format";
+
+export const revalidate = 86_400;
 
 export default async function Home() {
   const marketData = await getMarketData();
@@ -33,6 +36,8 @@ export default async function Home() {
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Source: {marketData.source}</p>
           </div>
         </header>
+
+        <RefreshStatusPanel initialMarketData={marketData} />
 
         {/* Metric strip: gives the reader the state of the market before they inspect rows. */}
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
